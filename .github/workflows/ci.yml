@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      AIRFLOW_HOME: /tmp/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Instalar dependencias (mismas versiones que la imagen Docker)
+        run: |
+          pip install -r requirements-dev.txt \
+            --constraint https://raw.githubusercontent.com/apache/airflow/constraints-2.10.5/constraints-3.12.txt
+      - name: Inicializar Airflow
+        run: airflow db migrate
+      - name: Tests (ETL, calidad de datos e integridad del DAG)
+        run: pytest -v
+      - name: Validar docker-compose
+        run: docker compose config -q
